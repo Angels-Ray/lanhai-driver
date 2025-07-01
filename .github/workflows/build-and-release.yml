@@ -1,0 +1,123 @@
+name: Build and Release Windows
+
+on:
+  push:
+    tags:
+      - 'v*'  # 当推送标签时触发，如 v1.0.0
+  workflow_dispatch:  # 允许手动触发
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    strategy:
+      matrix:
+        platform: [x64, Win32]
+        configuration: [Release]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+    
+    - name: Setup Visual Studio
+      uses: ilammy/msvc-dev-cmd@v1
+      with:
+        arch: ${{ matrix.platform == 'Win32' && 'x86' || 'x64' }}
+    
+    - name: Restore NuGet packages
+      run: |
+        cd windows
+        nuget restore demo.sln
+    
+    - name: Build solution
+      run: |
+        cd windows
+        msbuild demo.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /p:OutDir=..\build\${{ matrix.platform }}\
+    
+    - name: Create artifact directory
+      run: |
+        mkdir -p artifacts/${{ matrix.platform }}
+    
+    - name: Copy executables
+      run: |
+        # 复制生成的可执行文件
+        if (Test-Path "build/${{ matrix.platform }}/uart-demo.exe") {
+          Copy-Item "build/${{ matrix.platform }}/uart-demo.exe" "artifacts/${{ matrix.platform }}/"
+        }
+        if (Test-Path "build/${{ matrix.platform }}/udp-demo.exe") {
+          Copy-Item "build/${{ matrix.platform }}/udp-demo.exe" "artifacts/${{ matrix.platform }}/"
+        }
+        # 复制参数文件
+        Copy-Item -Recurse "params" "artifacts/${{ matrix.platform }}/"
+      shell: powershell
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: lanhai-driver-${{ matrix.platform }}
+        path: artifacts/${{ matrix.platform }}/
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+    
+    - name: Create release packages
+      run: |
+        cd artifacts
+        # 为每个平台创建压缩包
+        for platform in x64 Win32; do
+          if [ -d "lanhai-driver-$platform" ]; then
+            cd "lanhai-driver-$platform"
+            zip -r "../lanhai-driver-$platform.zip" .
+            cd ..
+          fi
+        done
+    
+    - name: Get tag name
+      id: tag
+      run: echo "tag=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        name: Release ${{ steps.tag.outputs.tag }}
+        draft: false
+        prerelease: false
+        files: |
+          artifacts/lanhai-driver-x64.zip
+          artifacts/lanhai-driver-Win32.zip
+        body: |
+          ## 蓝海驱动程序 ${{ steps.tag.outputs.tag }}
+          
+          ### 包含内容
+          - uart-demo.exe - 串口通信演示程序
+          - udp-demo.exe - UDP通信演示程序  
+          - params/ - 参数配置文件
+          
+          ### 平台支持
+          - **x64**: 64位Windows系统
+          - **Win32**: 32位Windows系统
+          
+          ### 使用说明
+          1. 下载对应平台的压缩包
+          2. 解压到任意目录
+          3. 运行对应的演示程序
+          
+          ---
+          自动构建于: ${{ github.sha }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
