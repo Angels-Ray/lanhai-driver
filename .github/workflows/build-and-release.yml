@@ -56,27 +56,19 @@ jobs:
     
     - name: Copy executables
       run: |
-        # 列出构建输出目录内容以调试
-        Write-Host "Contents of build/${{ matrix.platform }}:"
-        if (Test-Path "build/${{ matrix.platform }}") {
-          Get-ChildItem "build/${{ matrix.platform }}" | Format-Table Name, Length
-        } else {
-          Write-Host "Directory build/${{ matrix.platform }} does not exist"
-        }
-
-        # 复制生成的可执行文件
-        if (Test-Path "build/${{ matrix.platform }}/uart-demo.exe") {
+        # 复制生成的可执行文件（正确的路径是 windows/build/platform/）
+        if (Test-Path "windows/build/${{ matrix.platform }}/uart-demo.exe") {
           Write-Host "Copying uart-demo.exe"
-          Copy-Item "build/${{ matrix.platform }}/uart-demo.exe" "artifacts/${{ matrix.platform }}/"
+          Copy-Item "windows/build/${{ matrix.platform }}/uart-demo.exe" "artifacts/${{ matrix.platform }}/"
         } else {
-          Write-Host "uart-demo.exe not found in build/${{ matrix.platform }}/"
+          Write-Host "uart-demo.exe not found in windows/build/${{ matrix.platform }}/"
         }
 
-        if (Test-Path "build/${{ matrix.platform }}/udp-demo.exe") {
+        if (Test-Path "windows/build/${{ matrix.platform }}/udp-demo.exe") {
           Write-Host "Copying udp-demo.exe"
-          Copy-Item "build/${{ matrix.platform }}/udp-demo.exe" "artifacts/${{ matrix.platform }}/"
+          Copy-Item "windows/build/${{ matrix.platform }}/udp-demo.exe" "artifacts/${{ matrix.platform }}/"
         } else {
-          Write-Host "udp-demo.exe not found in build/${{ matrix.platform }}/"
+          Write-Host "udp-demo.exe not found in windows/build/${{ matrix.platform }}/"
         }
 
         # 复制参数文件
