@@ -8,24 +8,27 @@ on:
 
 jobs:
   build:
-    runs-on: windows-latest
-    
+    runs-on: windows-2019  # 使用Windows Server 2019，包含VS2019
+
     strategy:
       matrix:
         platform: [x64, Win32]
         configuration: [Release]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
-    - name: Setup MSBuild
-      uses: microsoft/setup-msbuild@v2
-    
-    - name: Setup Visual Studio
+
+    - name: Setup MSBuild (VS2019)
+      uses: microsoft/setup-msbuild@v1.3.1
+      with:
+        vs-version: '16.0'  # VS2019版本
+
+    - name: Setup Visual Studio 2019
       uses: ilammy/msvc-dev-cmd@v1
       with:
         arch: ${{ matrix.platform == 'Win32' && 'x86' || 'x64' }}
+        vsversion: 2019
     
     - name: Restore NuGet packages
       run: |
@@ -35,7 +38,7 @@ jobs:
     - name: Build solution
       run: |
         cd windows
-        msbuild demo.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /p:OutDir=..\build\${{ matrix.platform }}\
+        msbuild demo.sln /p:Configuration=${{ matrix.configuration }} /p:Platform=${{ matrix.platform }} /p:OutDir=..\build\${{ matrix.platform }}\ /p:PreprocessorDefinitions="_CRT_SECURE_NO_WARNINGS"
     
     - name: Create artifact directory
       run: |
