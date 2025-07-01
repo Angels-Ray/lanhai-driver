@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        platform: [x64, Win32]
+        platform: [x64, x86]
         configuration: [Release]
     
     steps:
@@ -25,7 +25,7 @@ jobs:
     - name: Setup Visual Studio
       uses: ilammy/msvc-dev-cmd@v1
       with:
-        arch: ${{ matrix.platform == 'Win32' && 'x86' || 'x64' }}
+        arch: ${{ matrix.platform == 'x86' && 'x86' || 'x64' }}
     
     - name: Restore NuGet packages
       run: |
@@ -78,7 +78,7 @@ jobs:
       run: |
         cd artifacts
         # 为每个平台创建压缩包
-        for platform in x64 Win32; do
+        for platform in x64 x86; do
           if [ -d "lanhai-driver-$platform" ]; then
             cd "lanhai-driver-$platform"
             zip -r "../lanhai-driver-$platform.zip" .
@@ -99,7 +99,7 @@ jobs:
         prerelease: false
         files: |
           artifacts/lanhai-driver-x64.zip
-          artifacts/lanhai-driver-Win32.zip
+          artifacts/lanhai-driver-x86.zip
         body: |
           ## 蓝海驱动程序 ${{ steps.tag.outputs.tag }}
           
@@ -110,7 +110,7 @@ jobs:
           
           ### 平台支持
           - **x64**: 64位Windows系统
-          - **Win32**: 32位Windows系统
+          - **x86**: 32位Windows系统
           
           ### 使用说明
           1. 下载对应平台的压缩包
